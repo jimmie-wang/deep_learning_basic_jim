@@ -2,6 +2,11 @@ import numpy as np
 
 from functions import softmax, cross_entropy_error
 
+"""神经网络由各种类型的层构成
+    每个layer要做：
+    1.forward：前向传播，predict进行函数计算，保留反向传播时必要的依赖值，可以是x，w，y
+    2.backward：反向传播，从Loss标量开始，对所有参数进行求导（求梯度），并保存梯度的同时，将自变量参数X被Loss的微分往下传
+    """
 
 class SoftmaxWithLoss:
     def __init__(self):
