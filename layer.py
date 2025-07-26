@@ -1,12 +1,14 @@
 import numpy as np
 
-from functions import softmax, cross_entropy_error
+from functions import softmax, cross_entropy_error, my_softmax
 
-"""神经网络由各种类型的层构成
+"""
+    神经网络由各种类型的层构成
     每个layer要做：
     1.forward：前向传播，predict进行函数计算，保留反向传播时必要的依赖值，可以是x，w，y
     2.backward：反向传播，从Loss标量开始，对所有参数进行求导（求梯度），并保存梯度的同时，将自变量参数X被Loss的微分往下传
-    """
+"""
+
 
 class SoftmaxWithLoss:
     def __init__(self):
@@ -32,6 +34,30 @@ class SoftmaxWithLoss:
 
         return dx
 
+# 这里的y，是一个(N,10)的结果矩阵
+class MySoftmaxWithLoss:
+    def __init__(self):
+        self.loss = None
+        self.y_softmax = None
+        self.t = None
+    def forward(self, y, t):
+        self.t = t
+        self.y_softmax = my_softmax(y)
+        # 似乎没有必要一定算一下loss？有必要，为了计算结果统一，一次前向传播过程，就是遵循网络结构进行计算
+        self.loss = cross_entropy_error(self.y_softmax, t)
+        return self.loss
+
+    def backward(self, dout=1):
+        # 交叉熵损失函数，即Loss，对第二层输出y怎么求导？返回一个y同形状向量
+        batch_size = self.t.shape[0] # 这里Loss是有一个平均的动作1/N在的，因此求导需要乘上
+        if self.t.size == self.y_softmax.size: # 01编码
+            dx = (self.y_softmax - self.t) / batch_size
+            return dx
+        else:
+            dx = self.y_softmax.copy()
+            dx[np.arange(batch_size), self.t] -= 1
+            dx = dx / batch_size
+            return dx
 
 class Affine:
     def __init__(self, W, b):
@@ -79,23 +105,17 @@ class Sigmoid:
         return dout*(self.y*(1-self.y))
 
 if __name__ == '__main__':
-    # 初始化 ReLU 层
-    relu = Relu()
-
-    # 正向传播
-    x = np.array([[1.0, -0.5, 2.0], [-1.0, 3.0, 0.0]])  # 形状 (2, 3)
-    out = relu.forward(x)
-    print("正向传播结果：")
-    print(out)
-    # 输出：
-    # [[1.  0.  2. ]
-    #  [0.  3.  0. ]]
-
-    # 假设上游传来的梯度
-    dout = np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]])  # 形状 (2, 3)
-    dx = relu.backward(dout)
-    print("\n反向传播结果：")
-    print(dx)
-    # 输出：
-    # [[0.1 0.  0.3]
-    #  [0.  0.5 0. ]]
+    y = np.array([[0.9,0.05,0.05],
+                  [0.3,0.7,0.00]])
+    t = np.array([[1,0,0],
+                  [0,1,0]])
+    softmax_layer1 = SoftmaxWithLoss()
+    softmax_layer2 = MySoftmaxWithLoss()
+    f1 = softmax_layer1.forward(y,t)
+    f2 = softmax_layer2.forward(y,t)
+    print(f1)
+    print(f2)
+    dx1 = softmax_layer1.backward(dout=1)
+    dx2 = softmax_layer2.backward(dout=1)
+    print(dx1)
+    print(dx2)
